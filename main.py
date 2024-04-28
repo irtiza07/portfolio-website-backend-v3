@@ -2,10 +2,9 @@ import requests
 import os
 import psycopg2  # type: ignore
 from functools import lru_cache
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-
 
 # Access environment variables
 load_dotenv()
@@ -136,7 +135,9 @@ def update_blog_metadata_db():
 
 
 @app.get("/recommendations")
-def get_users_top_recommendations(user_query: str = "Programming"):
+def get_users_top_recommendations(
+    user_query: str = Query(default="Programming", max_length=100)
+):
     return {"data": get_top_recommendations(user_query)}
 
 
