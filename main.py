@@ -141,7 +141,6 @@ def get_users_top_recommendations(user_query: str = "Programming"):
     return {"data": get_top_recommendations(user_query)}
 
 
-# Run the app with Uvicorn server
 if __name__ == "__main__":
     import uvicorn
 
