@@ -15,7 +15,7 @@ db_host_secret = os.environ.get("db_host_secret")
 db_port_secret = os.environ.get("db_port_secret")
 open_ai_api_key_secret = os.environ.get("open_ai_api_key_secret")
 
-DIRECTORY_PATH = "../posts"
+DIRECTORY_PATH = "../portfolio-website-nextjs/posts/"
 OPENAI_EMBEDDINGS_URL = "https://api.openai.com/v1/embeddings"
 
 # Create an instance of the FastAPI class
