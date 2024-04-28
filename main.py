@@ -113,7 +113,6 @@ def update_blog_metadata_db():
     try:
         db_conn = get_db_conn()
         cursor = db_conn.cursor()
-        force_write = False
         for file_name in extract_files_from_directory(DIRECTORY_PATH):
             print(f"Processing file: {file_name}")
             with open(generate_file_path(file_name), "r", encoding="utf-8") as file:
@@ -124,12 +123,11 @@ def update_blog_metadata_db():
 
                 lines = file.readlines()
                 title = parse_title_from_metadata(lines)
+                embeddings = get_embeddings_from_openai(md_content)
 
-                if force_write:
-                    embeddings = get_embeddings_from_openai(md_content)
-                    insert_blog_metadata_in_database(
-                        db_conn, cursor, title, url, embeddings
-                    )
+                insert_blog_metadata_in_database(
+                    db_conn, cursor, title, url, embeddings
+                )
     finally:
         close_db_conn(db_conn, cursor)
 
@@ -139,6 +137,12 @@ def get_users_top_recommendations(
     user_query: str = Query(default="Programming", max_length=100)
 ):
     return {"data": get_top_recommendations(user_query)}
+
+
+@app.get("/create_emeddings")
+def create_embeddings():
+    update_blog_metadata_db()
+    return {"status": "success"}
 
 
 if __name__ == "__main__":
