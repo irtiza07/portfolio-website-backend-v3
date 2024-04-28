@@ -37,7 +37,6 @@ def close_db_conn(conn, cursor):
 
 
 def get_db_conn():
-    # Connect to the PostgreSQL database
     try:
         conn = psycopg2.connect(
             dbname=dbname_secret,
