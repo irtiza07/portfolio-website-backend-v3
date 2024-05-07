@@ -215,7 +215,7 @@ def get_users_top_recommendations(
 @app.post("/create_embeddings")
 def create_embeddings(request: CreateEmbeddingsRequest):
     if request.youtube:
-        create_youtube_embeddings()
+        create_youtube_embeddings(force_refresh=request.force_refresh)
     if request.blog:
         update_blog_metadata_db(force_refresh=request.force_refresh)
 
