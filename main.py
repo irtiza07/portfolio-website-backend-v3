@@ -24,6 +24,7 @@ OPENAI_EMBEDDINGS_URL = "https://api.openai.com/v1/embeddings"
 class CreateEmbeddingsRequest(BaseModel):
     youtube: bool
     blog: bool
+    force_refresh: bool = False
 
 
 # Create an instance of the FastAPI class
@@ -125,69 +126,83 @@ def get_top_recommendations(query_string):
         close_db_conn(db_conn, cursor)
 
 
-def update_blog_metadata_db():
+def update_blog_metadata_db(force_refresh: bool = False):
     try:
         db_conn = get_db_conn()
         cursor = db_conn.cursor()
-        for file_name in extract_files_from_directory(DIRECTORY_PATH):
 
+        cursor.execute("SELECT url FROM content")
+        rows = cursor.fetchall()
+        stored_blogs_urls = [row[0] for row in rows]
+
+        for file_name in extract_files_from_directory(DIRECTORY_PATH):
             with open(generate_file_path(file_name), "r", encoding="utf-8") as file:
                 md_content = file.read()
                 url = parse_url_from_metadata(file.name)
+                if (url in stored_blogs_urls) and not force_refresh:
+                    print("Skipping. Blog exists in DB.")
+                    continue
+                else:
+                    print("Processing. New blog found.")
+                    file.seek(0)
 
-                file.seek(0)
+                    lines = file.readlines()
+                    title = parse_title_from_metadata(lines)
+                    embeddings = get_embeddings_from_openai(md_content)
 
-                lines = file.readlines()
-                title = parse_title_from_metadata(lines)
-                embeddings = get_embeddings_from_openai(md_content)
-
-                insert_blog_metadata_in_database(
-                    db_conn, cursor, title, url, embeddings
-                )
+                    insert_blog_metadata_in_database(
+                        db_conn, cursor, title, url, embeddings
+                    )
     finally:
         close_db_conn(db_conn, cursor)
 
 
-def create_youtube_embeddings():
-    print("Starting processing videos...")
-    keep_parsing = True
-    next_url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=UUDankIVMXJEkhtjv5yLSN4g&key={youtube_api_key}"
+def create_youtube_embeddings(force_refresh: bool = False):
+    try:
+        keep_parsing = True
+        next_url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=UUDankIVMXJEkhtjv5yLSN4g&key={youtube_api_key}"
 
-    while keep_parsing:
-        response = requests.get(next_url).json()
+        db_conn = get_db_conn()
+        cursor = db_conn.cursor()
+        cursor.execute("SELECT url FROM content WHERE category=1;")
+        stored_video_urls = [row[0] for row in cursor.fetchall()]
 
-        next_page_token = response.get("nextPageToken", None)
-        if next_page_token:
-            paginated_url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=UUDankIVMXJEkhtjv5yLSN4g&key={youtube_api_key}&pageToken={next_page_token}"
-            next_url = paginated_url
+        while keep_parsing:
+            response = requests.get(next_url).json()
+            next_page_token = response.get("nextPageToken", None)
+            if next_page_token:
+                paginated_url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=UUDankIVMXJEkhtjv5yLSN4g&key={youtube_api_key}&pageToken={next_page_token}"
+                next_url = paginated_url
 
-        if not next_page_token:
-            keep_parsing = False
+            if not next_page_token:
+                keep_parsing = False
 
-        items = response["items"]
-        for item in items:
-            title = item["snippet"]["title"]
-            description = item["snippet"]["description"]
-            thumbnail = item["snippet"]["thumbnails"]["high"]["url"]
-            video_id = item["snippet"]["resourceId"]["videoId"]
-            video_url = f"https://www.youtube.com/watch?v={video_id}"
-            content_to_embed = f"Title: {title} \n Description: {description}"
+            items = response["items"]
+            for item in items:
+                title = item["snippet"]["title"]
+                description = item["snippet"]["description"]
+                thumbnail = item["snippet"]["thumbnails"]["high"]["url"]
+                video_id = item["snippet"]["resourceId"]["videoId"]
+                video_url = f"https://www.youtube.com/watch?v={video_id}"
+                content_to_embed = f"Title: {title} \n Description: {description}"
 
-            try:
-                db_conn = get_db_conn()
-                cursor = db_conn.cursor()
-                embeddings = get_embeddings_from_openai(content_to_embed)
+                if (video_url in stored_video_urls) and not force_refresh:
+                    print("Skipping. Video exists in DB.")
+                    continue
+                else:
+                    print("Processing. New video found.")
+                    embeddings = get_embeddings_from_openai(content_to_embed)
+                    insert_video_metadata_in_database(
+                        db_conn=db_conn,
+                        cursor=cursor,
+                        title=title,
+                        url=video_url,
+                        thumbnail=thumbnail,
+                        embeddings=embeddings,
+                    )
 
-                insert_video_metadata_in_database(
-                    db_conn=db_conn,
-                    cursor=cursor,
-                    title=title,
-                    url=video_url,
-                    thumbnail=thumbnail,
-                    embeddings=embeddings,
-                )
-            finally:
-                close_db_conn(db_conn, cursor)
+    finally:
+        close_db_conn(db_conn, cursor)
 
 
 @app.get("/recommendations")
@@ -200,9 +215,9 @@ def get_users_top_recommendations(
 @app.post("/create_embeddings")
 def create_embeddings(request: CreateEmbeddingsRequest):
     if request.youtube:
-        create_youtube_embeddings()
+        create_youtube_embeddings(force_refresh=request.force_refresh)
     if request.blog:
-        update_blog_metadata_db()
+        update_blog_metadata_db(force_refresh=request.force_refresh)
 
     return {"status": "success"}
 
