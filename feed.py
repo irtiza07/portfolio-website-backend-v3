@@ -14,7 +14,7 @@ db_pass_secret = os.environ.get("db_pass_secret")
 db_host_secret = os.environ.get("db_host_secret")
 db_port_secret = os.environ.get("db_port_secret")
 
-DIRECTORY_PATH = "../portfolio-website-nextjs/posts/"
+GENERATED_FEED_FILE_OUTPUT_DIRECTORY = "../portfolio-website-nextjs/public/"
 
 
 def get_db_conn():
@@ -73,8 +73,8 @@ rss_feed = fg.rss_str(pretty=True).decode("utf-8")
 
 
 # Write the XML feed to a file
-with open("feed.xml", "w", encoding="utf-8") as f:
+feed_file_path = os.path.join(GENERATED_FEED_FILE_OUTPUT_DIRECTORY, "feed.xml")
+with open(feed_file_path, "w", encoding="utf-8") as f:
     f.write(rss_feed)
 
-# Create XML file
-# Serve XML on /feed route
+print(f"feed.xml has been written to {feed_file_path}")
