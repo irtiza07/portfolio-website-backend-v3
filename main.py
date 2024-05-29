@@ -80,6 +80,12 @@ def parse_title_from_metadata(lines):
             return line.split(":")[1].strip()
 
 
+def parse_description_from_metadata(lines):
+    for line in lines:
+        if line.startswith("description:"):
+            return line.split(":")[1].strip()
+
+
 @lru_cache(maxsize=200)
 def get_embeddings_from_openai(input_text: str):
     headers = {
@@ -92,9 +98,11 @@ def get_embeddings_from_openai(input_text: str):
     return response.json()["data"][0]["embedding"]
 
 
-def insert_blog_metadata_in_database(db_conn, cursor, title, url, embeddings):
-    query = "INSERT INTO content (title, url, category, blog_embedding) VALUES (%s, %s, 0, %s);"
-    cursor.execute(query, (title, url, embeddings))
+def insert_blog_metadata_in_database(
+    db_conn, cursor, title, url, embeddings, description
+):
+    query = "INSERT INTO content (title, url, category, blog_embedding, description) VALUES (%s, %s, 0, %s, %s);"
+    cursor.execute(query, (title, url, embeddings, description))
     db_conn.commit()
     return
 
@@ -148,10 +156,11 @@ def update_blog_metadata_db(force_refresh: bool = False):
 
                     lines = file.readlines()
                     title = parse_title_from_metadata(lines)
+                    description = parse_description_from_metadata(lines)
                     embeddings = get_embeddings_from_openai(md_content)
 
                     insert_blog_metadata_in_database(
-                        db_conn, cursor, title, url, embeddings
+                        db_conn, cursor, title, url, embeddings, description
                     )
     finally:
         close_db_conn(db_conn, cursor)
