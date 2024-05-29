@@ -37,7 +37,7 @@ def get_db_conn():
 db_conn = get_db_conn()
 cursor = db_conn.cursor()
 cursor.execute(
-    "SELECT title, url, created_at, id FROM content WHERE category=0 ORDER BY created_at ASC"
+    "SELECT title, url, created_at, id, description FROM content WHERE category=0 ORDER BY created_at ASC"
 )
 rows = cursor.fetchall()
 print(rows)
@@ -63,7 +63,7 @@ for row in rows:
     )
     feed_entry_to_add.content(row[1])
     feed_entry_to_add.link({"href": row[1], "title": row[0]})
-    feed_entry_to_add.description(row[0])
+    feed_entry_to_add.description(row[4])
     feed_entry_to_add.guid(str(row[3]))
     feed_entry_to_add.pubDate(publish_date)
 
