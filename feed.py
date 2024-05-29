@@ -61,7 +61,7 @@ for row in rows:
     feed_entry_to_add.author(
         {"name": "Irtiza Hafiz", "email": "irtizahafiz9@gmail.com"}
     )
-    feed_entry_to_add.content(row[1])
+    feed_entry_to_add.content(row[4])
     feed_entry_to_add.link({"href": row[1], "title": row[0]})
     feed_entry_to_add.description(row[4])
     feed_entry_to_add.guid(str(row[3]))
