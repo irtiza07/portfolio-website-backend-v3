@@ -4,6 +4,7 @@ import psycopg2  # type: ignore
 from functools import lru_cache
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
@@ -36,6 +37,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
+
+# Mount the 'audio' directory to serve static files
+app.mount("/audio", StaticFiles(directory="audio"), name="audio")
 
 
 def close_db_conn(conn, cursor):
