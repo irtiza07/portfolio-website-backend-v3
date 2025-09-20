@@ -5,7 +5,6 @@ import os
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from pydantic import BaseModel
 from utils import (
     extract_files_from_directory,
     generate_file_path,
@@ -13,18 +12,13 @@ from utils import (
     parse_title_from_metadata,
     parse_url_from_metadata,
 )
-from typing import List, Optional
+from constants import BLOG_CONTENT_CATEGORY_ID, YOUTUBE_CONTENT_CATEGORY_ID
+from models import CreateEmbeddingsRequest, RecommendationsResponse
 
-# Access environment variables
 load_dotenv()
 open_ai_api_key_secret = os.environ.get("open_ai_api_key_secret")
 youtube_api_key = os.environ.get("youtube_api_key")
 
-DIRECTORY_PATH = "../portfolio-website-nextjs/posts/"
-OPENAI_EMBEDDINGS_URL = "https://api.openai.com/v1/embeddings"
-
-YOUTUBE_CONTENT_CATEGORY_ID = 1
-BLOG_CONTENT_CATEGORY_ID = 2
 
 openai_ef = embedding_functions.OpenAIEmbeddingFunction(
     api_key=open_ai_api_key_secret,
@@ -35,24 +29,6 @@ chromadb_client = chromadb.PersistentClient(path="./db")
 content_collection = chromadb_client.get_or_create_collection(
     name="content", embedding_function=openai_ef
 )
-
-
-class CreateEmbeddingsRequest(BaseModel):
-    youtube: bool
-    blog: bool
-
-
-class Recommendation(BaseModel):
-    title: str
-    url: str
-    description: Optional[str] = None
-    thumbnail: Optional[str] = None
-    content_category_id: int
-    score: float
-
-
-class RecommendationsResponse(BaseModel):
-    data: List[Recommendation]
 
 
 app = FastAPI()
@@ -71,7 +47,6 @@ def get_top_recommendations(query_string: str):
         n_results=5,
     )
 
-    # Extract the first (and only) list from results["documents"], results["metadatas"], and results["distances"]
     documents = results["documents"][0]
     metadatas = results["metadatas"][0]
     distances = results["distances"][0]
@@ -85,7 +60,7 @@ def get_top_recommendations(query_string: str):
                 "description": metadata.get("description", ""),
                 "thumbnail": metadata.get("thumbnail", None),
                 "content_category_id": metadata.get("content_category_id"),
-                "score": distances[i],  # Use the corresponding distance
+                "score": distances[i],
             }
         )
 
