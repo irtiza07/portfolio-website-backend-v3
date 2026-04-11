@@ -36,8 +36,11 @@ app = FastAPI()
 
 @app.on_event("startup")
 def sync_embeddings():
+    print("[startup] Syncing blog embeddings...")
     create_blog_embeddings()
+    print("[startup] Blog sync complete. Syncing YouTube embeddings...")
     create_youtube_embeddings()
+    print("[startup] YouTube sync complete. All content up to date.")
 
 
 app.add_middleware(
