@@ -32,6 +32,14 @@ content_collection = chromadb_client.get_or_create_collection(
 
 
 app = FastAPI()
+
+
+@app.on_event("startup")
+def sync_embeddings():
+    create_blog_embeddings()
+    create_youtube_embeddings()
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
